@@ -94,9 +94,17 @@ void Emakefun_EncoderMotor::init(FuncPtr encoder_fun) {
     pinMode(ENCODER1pin, INPUT);
     CallBack[encodernum] = encoder_fun;
     if (encodernum == 0) {
-      attachPinChangeInterrupt(ENCODER1pin, *(FuncPtr )(&EncoderCallback1), CHANGE);
+#if ARDUINO > 10609
+     attachPinChangeInterrupt(ENCODER1pin, *(FuncPtr )(&EncoderCallback1), CHANGE);
+#else
+     attachPinChangeInterrupt(ENCODER1pin, *(FuncPtr )(&Emakefun_EncoderMotor::EncoderCallback1), CHANGE);
+#endif
     } else if (encodernum == 1) {
-      attachPinChangeInterrupt(ENCODER1pin, *(FuncPtr )(&EncoderCallback2), CHANGE);
+#if ARDUINO > 10609
+     attachPinChangeInterrupt(ENCODER1pin, *(FuncPtr )(&EncoderCallback2), CHANGE);
+#else
+     attachPinChangeInterrupt(ENCODER1pin, *(FuncPtr )(&Emakefun_EncoderMotor::EncoderCallback2), CHANGE);
+#endif
     }
 }
 
@@ -173,7 +181,7 @@ Emakefun_StepperMotor *Emakefun_MotorDriver::getStepper(uint16_t steps, uint8_t 
 }
 
 Emakefun_Servo *Emakefun_MotorDriver::getServo(uint8_t num) {
-  if (num > 4) return NULL;
+  if (num > 6) return NULL;
 
   num--;
 
@@ -190,6 +198,10 @@ Emakefun_Servo *Emakefun_MotorDriver::getServo(uint8_t num) {
       pwm = 14;
     } else if (num == 3) {
       pwm = 15;
+    } else if ( num == 4 ) {
+      pwm = 5;  // give arduino gpio
+    } else if ( num == 5 ) {
+      pwm = 6;  // give arduino gpio
     }
     servos[num].PWMpin = pwm;
   }
@@ -217,9 +229,16 @@ void Emakefun_Servo::setServoPulse(double pulse) {
   MC->setPWM(PWMpin, pulse);
 }
 void Emakefun_Servo::writeServo(uint8_t angle) {
+  if (servonum == 4 || servonum == 5 ) {
+    if (!IoServo.attached()) {
+        IoServo.attach(PWMpin);
+    }
+    IoServo.write(angle);
+  } else {
   double pulse;
   pulse = 0.5 + angle / 90.0;
   setServoPulse(pulse);
+  }
   currentAngle = angle;
   /* if(n>1){
      currentAngle[n-12]=angle;
