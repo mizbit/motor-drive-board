@@ -19,7 +19,7 @@ uint8_t microstepcurve[] = {0, 50, 98, 142, 180, 212, 236, 250, 255};
 uint8_t microstepcurve[] = {0, 25, 50, 74, 98, 120, 141, 162, 180, 197, 212, 225, 236, 244, 250, 253, 255};
 #endif
 
-Emakefun_MotorDriver::Emakefun_MotorDriver(uint8_t addr){
+Emakefun_MotorDriver::Emakefun_MotorDriver(uint8_t addr) {
   _addr = addr;
   _pwm = Emakefun_MS_PWMServoDriver(_addr);
 }
@@ -85,19 +85,27 @@ void Emakefun_EncoderMotor::EncoderCallback2(void)
 }
 
 Emakefun_EncoderMotor::Emakefun_EncoderMotor(void) {
-   MC = NULL;
-   encodernum = 0;
-   PWMpin = IN1pin = IN2pin = ENCODER1pin = ENCODER2pin = 0;
+  MC = NULL;
+  encodernum = 0;
+  PWMpin = IN1pin = IN2pin = ENCODER1pin = ENCODER2pin = 0;
 }
 
 void Emakefun_EncoderMotor::init(FuncPtr encoder_fun) {
-    pinMode(ENCODER1pin, INPUT);
-    CallBack[encodernum] = encoder_fun;
-    if (encodernum == 0) {
-      attachPinChangeInterrupt(ENCODER1pin, *(FuncPtr )(&EncoderCallback1), CHANGE);
-    } else if (encodernum == 1) {
-      attachPinChangeInterrupt(ENCODER1pin, *(FuncPtr )(&EncoderCallback2), CHANGE);
-    }
+  pinMode(ENCODER1pin, INPUT);
+  CallBack[encodernum] = encoder_fun;
+  if (encodernum == 0) {
+#if ARDUINO > 10609
+    attachPinChangeInterrupt(ENCODER1pin, *(FuncPtr )(&EncoderCallback1), CHANGE);
+#else
+    attachPinChangeInterrupt(ENCODER1pin, *(FuncPtr )(&Emakefun_EncoderMotor::EncoderCallback1), CHANGE);
+#endif
+  } else if (encodernum == 1) {
+#if ARDUINO > 10609
+    attachPinChangeInterrupt(ENCODER1pin, *(FuncPtr )(&EncoderCallback2), CHANGE);
+#else
+    attachPinChangeInterrupt(ENCODER1pin, *(FuncPtr )(&Emakefun_EncoderMotor::EncoderCallback2), CHANGE);
+#endif
+  }
 }
 
 Emakefun_EncoderMotor *Emakefun_MotorDriver::getEncoderMotor(uint8_t num) {
@@ -108,11 +116,11 @@ Emakefun_EncoderMotor *Emakefun_MotorDriver::getEncoderMotor(uint8_t num) {
     encoder[num].encodernum = num;
     encoder[num].MC = this;
 
-     uint8_t pwm, in1, in2, encoder1pin ,encoder2pin;
+    uint8_t pwm, in1, in2, encoder1pin , encoder2pin;
     if (num == 0) {
       pwm = 8; in2 = 9; in1 = 10; encoder1pin = 3; encoder2pin = 2;
     } else if (num == 1) {
-      pwm = 13; in2 = 12; in1 = 11;encoder1pin = 7; encoder2pin = 4;
+      pwm = 13; in2 = 12; in1 = 11; encoder1pin = 7; encoder2pin = 4;
     }
     encoder[num].IN1pin = in1;
     encoder[num].IN2pin = in2;
@@ -173,10 +181,9 @@ Emakefun_StepperMotor *Emakefun_MotorDriver::getStepper(uint16_t steps, uint8_t 
 }
 
 Emakefun_Servo *Emakefun_MotorDriver::getServo(uint8_t num) {
-  if (num > 4) return NULL;
+  if (num > 6) return NULL;
 
   num--;
-
   if (servos[num].servonum == 0) {
     // not init'd yet!
     servos[num].servonum = num;
@@ -190,8 +197,12 @@ Emakefun_Servo *Emakefun_MotorDriver::getServo(uint8_t num) {
       pwm = 14;
     } else if (num == 3) {
       pwm = 15;
+    } else if ( num == 4 ) {
+      pwm = 5;  // give arduino gpio
+    } else if ( num == 5 ) {
+      pwm = 6;  // give arduino gpio
     }
-    servos[num].PWMpin = pwm;
+   servos[num].PWMpin = pwm;
   }
   return &servos[num];
 }
@@ -217,9 +228,17 @@ void Emakefun_Servo::setServoPulse(double pulse) {
   MC->setPWM(PWMpin, pulse);
 }
 void Emakefun_Servo::writeServo(uint8_t angle) {
-  double pulse;
-  pulse = 0.5 + angle / 90.0;
-  setServoPulse(pulse);
+
+  if (servonum == 4 || servonum == 5 ) {
+    if (!IoServo.attached()) {
+        IoServo.attach(PWMpin);
+    }
+    IoServo.write(angle);
+  } else {
+    double pulse;
+    pulse = 0.5 + angle / 90.0;
+    setServoPulse(pulse);
+  }
   currentAngle = angle;
   /* if(n>1){
      currentAngle[n-12]=angle;
@@ -598,30 +617,30 @@ void Emakefun_Sensor::Sing(byte songName)
 
 uint16_t Emakefun_Sensor::GetUltrasonicDistance(void)
 {
-    uint16_t FrontDistance;
-    digitalWrite(TrigPin, LOW);
-    delayMicroseconds(2);
-    digitalWrite(TrigPin, HIGH);
-    delayMicroseconds(10);
-    digitalWrite(TrigPin, LOW);
-    FrontDistance = pulseIn(EchoPin, HIGH) / 58.00;
-    return FrontDistance;
+  uint16_t FrontDistance;
+  digitalWrite(TrigPin, LOW);
+  delayMicroseconds(2);
+  digitalWrite(TrigPin, HIGH);
+  delayMicroseconds(10);
+  digitalWrite(TrigPin, LOW);
+  FrontDistance = pulseIn(EchoPin, HIGH) / 58.00;
+  return FrontDistance;
 }
-  
+
 int Emakefun_Sensor::GetNrf24L01(char *RaddrName) {
   mNRF24L01->setRADDR((byte *)RaddrName);
   delay(10);
-  if (mNRF24L01->dataReady()){
+  if (mNRF24L01->dataReady()) {
     mNRF24L01->getData((byte *) &GetNrfData);
     return GetNrfData;
   }
-  else{
+  else {
     return NULL;
-    }
+  }
 }
 
-void Emakefun_Sensor::sendNrf24l01(char *TaddrName,int SendNrfData){
-  mNRF24L01->setTADDR((byte *)TaddrName); 
+void Emakefun_Sensor::sendNrf24l01(char *TaddrName, int SendNrfData) {
+  mNRF24L01->setTADDR((byte *)TaddrName);
   mNRF24L01->send((byte *)&SendNrfData);
   while (mNRF24L01->isSending()) delay(1);        //Until you send successfully, exit the loop
   Serial.print("Send success:");
@@ -673,12 +692,12 @@ Emakefun_Sensor *Emakefun_MotorDriver::getSensor(E_SENSOR_INDEX n)
         sensors[n].mNRF24L01->config();
       }
       break;
-	case E_ULTRASONIC:
-            sensors[n].EchoPin = ECHO_PIN;
-            sensors[n].TrigPin = TRIG_PIN;
-            pinMode(ECHO_PIN, INPUT);
-            pinMode(TRIG_PIN, OUTPUT);
-            break;
+    case E_ULTRASONIC:
+      sensors[n].EchoPin = ECHO_PIN;
+      sensors[n].TrigPin = TRIG_PIN;
+      pinMode(ECHO_PIN, INPUT);
+      pinMode(TRIG_PIN, OUTPUT);
+      break;
   }
   sensors[n].MC = this;
   return &sensors[n];

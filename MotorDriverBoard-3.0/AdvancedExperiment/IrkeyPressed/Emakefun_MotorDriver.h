@@ -1,12 +1,11 @@
 #ifndef _Emakefun_MotorDriver_h_
 #define _Emakefun_MotorDriver_h_
 
-
 #include <inttypes.h>
 #include <Wire.h>
 #include "SPI.h"
 #include "Emakefun_MS_PWMServoDriver.h"
-
+#include "Servo.h"
 #include "IRremote.h"
 #include "PS2X_lib.h"  //for v1.6
 #include "Buzzer.h"
@@ -154,17 +153,17 @@ class Emakefun_StepperMotor {
 
 class Emakefun_Servo
 {
- public:
+public:
   Emakefun_Servo(void);
   friend class Emakefun_MotorDriver;
   void setServoPulse(double pulse);
   void writeServo(uint8_t angle);
   uint8_t readDegrees();
- 
- private:
+private:
   uint8_t PWMpin;
+  Servo IoServo;
   Emakefun_MotorDriver *MC;
-  uint8_t servonum,currentAngle;
+  uint8_t servonum, currentAngle;
 };
 
 class Emakefun_MotorDriver
@@ -187,7 +186,7 @@ class Emakefun_MotorDriver
     Emakefun_EncoderMotor encoder[2];
     Emakefun_StepperMotor steppers[2];
     Emakefun_MS_PWMServoDriver _pwm;
-    Emakefun_Servo servos[4];
+    Emakefun_Servo servos[6];
     Emakefun_Sensor sensors[E_SENSOR_MAX];
 };
 
