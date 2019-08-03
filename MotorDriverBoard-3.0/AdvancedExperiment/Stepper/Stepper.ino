@@ -4,7 +4,7 @@
 
 Emakefun_MotorDriver mMotorDriver = Emakefun_MotorDriver();
 Emakefun_StepperMotor *StepperMotor_1 = mMotorDriver.getStepper(200,1);
-Emakefun_StepperMotor *StepperMotor_2 = mMotorDriver.getStepper(200,2);
+
 
 
 
@@ -12,13 +12,19 @@ Emakefun_StepperMotor *StepperMotor_2 = mMotorDriver.getStepper(200,2);
 void setup()
 {
     Serial.begin(9600);
-    mMotorDriver.begin(50);
+    mMotorDriver.begin();
 
 }
 
 void loop()
 {
- StepperMotor_1->step(50,FORWARD, SINGLE);
- StepperMotor_2->step(50,FORWARD, SINGLE);
+  StepperMotor_1->setSpeed(50);
+ StepperMotor_1->step(200,1, 1);
+ delay(1000);
+ StepperMotor_1->setSpeed(300);
+  StepperMotor_1->step(200,1, 1);
+ delay(1000);
+
+
 
 }
